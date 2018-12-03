@@ -231,6 +231,26 @@ describe('Engine: event', () => {
 
   context('rule events: simple', () => {
     beforeEach(() => simpleSetup())
+
+    it('the rule result is a _copy_ of the rule`s conditions, and unaffected by mutation', async () => {
+      let rule = engine.rules[0]
+      let firstPass
+      rule.on('success', function (e, almanac, ruleResult) {
+        firstPass = ruleResult
+        delete ruleResult.conditions.any // subsequently modify the conditions in this rule result
+      })
+      await engine.run()
+
+      // run the engine again, now that ruleResult.conditions was modified
+      let secondPass
+      rule.on('success', function (e, almanac, ruleResult) {
+        secondPass = ruleResult
+      })
+      await engine.run()
+
+      expect(firstPass).to.deep.equal(secondPass) // second pass was unaffected by first pass
+    })
+
     it('on-success, it passes the event type and params', async () => {
       let failureSpy = sinon.spy()
       let successSpy = sinon.spy()
@@ -285,7 +305,7 @@ describe('Engine: event', () => {
       rule.on('success', successSpy)
       await engine.run()
       let ruleResult = successSpy.getCall(0).args[2]
-      let expected = '{"conditions":{"priority":1,"any":[{"operator":"greaterThanInclusive","value":21,"fact":"age"},{"operator":"equal","value":true,"fact":"qualified"}]},"event":{"type":"setDrinkingFlag","params":{"canOrderDrinks":true}},"priority":100,"result":true}'
+      let expected = '{"conditions":{"priority":1,"any":[{"operator":"greaterThanInclusive","value":21,"fact":"age","factResult":21,"result":true},{"operator":"equal","value":true,"fact":"qualified","factResult":false,"result":false}]},"event":{"type":"setDrinkingFlag","params":{"canOrderDrinks":true}},"priority":100,"result":true}'
       expect(JSON.stringify(ruleResult)).to.equal(expected)
     })
   })

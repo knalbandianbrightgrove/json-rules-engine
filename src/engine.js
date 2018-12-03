@@ -58,6 +58,18 @@ class Engine extends EventEmitter {
   }
 
   /**
+   * Remove a rule from the engine
+   * @param {object|Rule} rule - rule definition. Must be a instance of Rule
+   */
+  removeRule (rule) {
+    if ((rule instanceof Rule) === false) throw new Error('Engine: removeRule() rule must be a instance of Rule')
+
+    let index = this.rules.indexOf(rule)
+    if (index === -1) return false
+    return Boolean(this.rules.splice(index, 1).length)
+  }
+
+  /**
    * Add a custom operator definition
    * @param {string}   operatorOrName - operator identifier within the condition; i.e. instead of 'equals', 'greaterThan', etc
    * @param {function(factValue, jsonValue)} callback - the method to execute when the operator is encountered.
@@ -71,6 +83,22 @@ class Engine extends EventEmitter {
     }
     debug(`engine::addOperator name:${operator.name}`)
     this.operators.set(operator.name, operator)
+  }
+
+  /**
+   * Remove a custom operator definition
+   * @param {string}   operatorOrName - operator identifier within the condition; i.e. instead of 'equals', 'greaterThan', etc
+   * @param {function(factValue, jsonValue)} callback - the method to execute when the operator is encountered.
+   */
+  removeOperator (operatorOrName) {
+    let operatorName
+    if (operatorOrName instanceof Operator) {
+      operatorName = operatorOrName.name
+    } else {
+      operatorName = operatorOrName
+    }
+
+    return this.operators.delete(operatorName)
   }
 
   /**
@@ -91,6 +119,21 @@ class Engine extends EventEmitter {
     debug(`engine::addFact id:${factId}`)
     this.facts.set(factId, fact)
     return this
+  }
+
+  /**
+   * Add a fact definition to the engine.  Facts are called by rules as they are evaluated.
+   * @param {object|Fact} id - fact identifier or instance of Fact
+   */
+  removeFact (factOrId) {
+    let factId
+    if (!(factOrId instanceof Fact)) {
+      factId = factOrId
+    } else {
+      factId = factOrId.id
+    }
+
+    return this.facts.delete(factId)
   }
 
   /**
@@ -139,7 +182,7 @@ class Engine extends EventEmitter {
    * @param  {Rule[]} array of rules to be evaluated
    * @return {Promise} resolves when all rules in the array have been evaluated
    */
-  async evaluateRules (ruleArray, almanac) {
+  evaluateRules (ruleArray, almanac) {
     return Promise.all(ruleArray.map((rule) => {
       if (this.status !== RUNNING) {
         debug(`engine::run status:${this.status}; skipping remaining rules`)
@@ -164,7 +207,7 @@ class Engine extends EventEmitter {
    * @param  {Object} runOptions - run options
    * @return {Promise} resolves when the engine has completed running
    */
-  async run (runtimeFacts = {}) {
+  run (runtimeFacts = {}) {
     debug(`engine::run started`)
     debug(`engine::run runtimeFacts:`, runtimeFacts)
     runtimeFacts['success-events'] = new Fact('success-events', SuccessEventFact(), { cache: false })
