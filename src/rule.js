@@ -5,6 +5,7 @@ import RuleResult from './rule-result'
 import { EventEmitter } from 'events'
 
 let debug = require('debug')('json-rules-engine')
+let _ = require('underscore')
 
 class Rule extends EventEmitter {
   /**
@@ -206,7 +207,7 @@ class Rule extends EventEmitter {
       }
       let orderedSets = this.prioritizeConditions(conditions)
       let cursor = Promise.resolve()
-      orderedSets.forEach((set) => {
+      _.forEach(orderedSets, (set) => {
         let stop = false
         cursor = cursor.then((setResult) => {
           // after the first set succeeds, don't fire off the remaining promises
